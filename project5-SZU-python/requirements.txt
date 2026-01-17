@@ -1,0 +1,20 @@
+# Project5 (DINOv2 NumPy + Django Web)
+#
+# Core runtime deps for:
+# - assignments/*.py (gallery build / preprocessing / debug)
+# - assignments/XImageSearch (Django web)
+
+django==4.2.11
+numpy==1.26.4
+scipy==1.11.4
+pillow==10.4.0
+python-dotenv>=1.0.0
+
+# Optional (GPU query embedding via ONNX Runtime)
+# Windows DirectML (recommended):
+# onnxruntime-directml
+# NVIDIA CUDA (optional):
+# onnxruntime-gpu
+
+# Optional (Claude wrapper; only used when ENABLE_CLAUDE_SONNET=True)
+anthropic>=0.20.0

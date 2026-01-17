@@ -1,0 +1,40 @@
+{% extends 'image_search/base.html' %}
+{% block title %}图搜图 · 历史详情{% endblock %}
+{% block content %}
+  <div class="card pad" style="margin-bottom:16px;">
+    <div class="toolbar">
+      <div class="left" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <div class="badge"><span class="mini-dot" aria-hidden="true"></span> 历史详情</div>
+        <div class="pill">{{ record.created_at|date:"Y-m-d H:i:s" }}</div>
+      </div>
+      <div class="right">
+        <a class="button" href="/history/">返回历史</a>
+        <a class="button" href="/results/?hid={{ record.id }}">在结果页查看</a>
+      </div>
+    </div>
+
+    {% if query_web_url %}
+      <div style="margin-top:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+        <span class="pill">Query</span>
+        <img src="{{ query_web_url }}" alt="query" style="width:56px; height:56px; border-radius:14px; object-fit:cover; border:1px solid var(--border);">
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="grid" id="detail-grid">
+    {% for it in items %}
+      <div class="item" data-url="{{ it.url }}" data-score="{{ it.score|floatformat:6 }}">
+        <div class="match"><i></i><span class="m-text">Match</span></div>
+        <img class="thumb" src="{{ it.url }}" alt="result">
+        <div class="meta">
+          <div class="url">{{ it.url }}</div>
+          <div class="score">{{ it.score|floatformat:3 }}</div>
+        </div>
+      </div>
+    {% empty %}
+      <div class="card pad" style="grid-column:1/-1; color: var(--muted);">该记录没有结果</div>
+    {% endfor %}
+  </div>
+
+  <script>UI?.bindImageGridViewer(document);</script>
+{% endblock %}

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark light">
+  <title>{% block title %}图搜图{% endblock %}</title>
+  {% load static %}
+
+  <link id="main-css" rel="stylesheet" href="{% static 'image_search/styles.css' %}?v=20260116-2">
+
+  <style>
+    /* critical fallback: prevent layout break if stylesheet fails */
+    #sakura-canvas{
+      position:fixed; inset:0;
+      width:100%; height:100%;
+      pointer-events:none;
+      z-index:1;
+      display:block;
+    }
+    .bg-blobs{ position:fixed; inset:0; pointer-events:none; z-index:0; }
+    .container{ position:relative; z-index:10; }
+  </style>
+</head>
+
+<body>
+  <div class="bg-blobs" aria-hidden="true"></div>
+  <canvas id="sakura-canvas" class="sakura" aria-hidden="true"></canvas>
+
+  <header class="header">
+    <nav class="nav">
+      <a class="brand" href="/" aria-label="回到首页">
+        <span class="dot" aria-hidden="true"></span>
+        <span>Image Search</span>
+      </a>
+
+      <div class="links" role="navigation" aria-label="主导航">
+        <a class="navlink" href="/" data-nav="/">首页</a>
+        <a class="navlink" href="/history/" data-nav="/history/">搜索历史</a>
+        <a class="navlink" href="/favorites/" data-nav="/favorites/">收藏夹</a>
+        <a class="navlink" href="/results/" data-nav="/results/">结果</a>
+      </div>
+
+      <div class="nav-aux">
+        <button id="sakura-toggle" class="button ghost iconbtn" type="button" aria-label="樱花特效开关" title="樱花特效开关">🌸</button>
+        <button id="theme-toggle" class="button ghost iconbtn" type="button" aria-label="主题切换" title="主题切换">☾</button>
+        <a class="button primary" href="/" title="快捷键 Ctrl/Command + O 选择图片">
+          上传搜索 <span class="kbd">Ctrl/Command O</span>
+        </a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <script src="{% static 'image_search/ui.js' %}?v=20260116-2"></script>
+
+  <script>
+    (function(){
+      // 更稳的样式加载检测：检查关键 CSS 变量是否存在
+      function ensureStyles(){
+        const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+        if (bg) return;
+
+        const main = document.getElementById('main-css');
+        const href = main?.href;
+        if (!href) return;
+
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = href.split("?")[0] + "?v=" + Date.now(); // bust cache
+        document.head.appendChild(link);
+        console.warn("[UI] styles.css not applied, injected fallback:", link.href);
+      }
+      ensureStyles();
+
+      window.UI && UI.initTheme();
+      document.getElementById('theme-toggle')?.addEventListener('click', ()=> UI.toggleTheme());
+
+      var path = window.location.pathname || "/";
+      document.querySelectorAll('[data-nav]').forEach(function(a){
+        var p = a.getAttribute('data-nav');
+        if (p === "/" ? path === "/" : path.startsWith(p)) a.classList.add('active');
+      });
+
+      UI.initSpotlight();
+      UI.bindRipple();
+      UI.bindEntrance();
+      UI.bindTilt('.item');
+      UI.bindImageGridViewer(document);
+
+      UI.initSakura({ canvasId: 'sakura-canvas' });
+      document.getElementById('sakura-toggle')?.addEventListener('click', ()=> UI.toggleSakura());
+    })();
+  </script>
+</body>
+</html>

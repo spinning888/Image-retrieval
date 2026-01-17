@@ -1,0 +1,148 @@
+{% extends 'image_search/base.html' %}
+{% block title %}图搜图 · 收藏夹{% endblock %}
+{% block content %}
+  <div class="card pad" style="margin-bottom: 16px;">
+    <div class="toolbar">
+      <div class="left">
+        <div class="badge"><span class="mini-dot" aria-hidden="true"></span> 我的收藏夹</div>
+        <div class="pill">支持关键字筛选 和 批量移除</div>
+      </div>
+      <div class="right" style="min-width: min(520px, 100%);">
+        <input id="fav-filter" type="search" placeholder="筛选：标签 / URL..." style="max-width: 420px;">
+      </div>
+    </div>
+
+    <div style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <button id="select-all" class="button" type="button">全选/取消</button>
+      <button id="remove-selected" class="button secondary" type="button">移除选中</button>
+      <div class="footer" id="sel-count" style="margin-left:auto;">已选 0 项</div>
+    </div>
+  </div>
+
+  <div class="grid" id="fav-grid">
+    {% for f in favorites %}
+      <div class="item" data-id="{{ f.id }}" data-url="{{ f.url }}" data-score="{{ f.score|floatformat:6 }}" data-tags="{{ f.tags|default:'' }}">
+        <input type="checkbox" class="fav-check" style="position:absolute; margin:10px; width:18px; height:18px;" />
+        <img class="thumb" src="{{ f.url }}" alt="fav">
+        <div class="meta">
+          <div class="url">{{ f.url }}</div>
+          <div class="score">{{ f.score|floatformat:3 }}</div>
+          <div class="pill" style="margin-top:6px; display:inline-block;">标签：{{ f.tags|default:"未标记" }}</div>
+        </div>
+        <div style="padding: 0 10px 12px; display:flex; gap:10px; align-items:center;">
+          <button class="button secondary fav-del" type="button">移除</button>
+          <button class="button ghost copy-url" type="button">复制链接</button>
+        </div>
+      </div>
+    {% empty %}
+      <div class="card pad" style="grid-column:1/-1; color: var(--muted);">暂无收藏</div>
+    {% endfor %}
+  </div>
+
+  <form id="csrf-form" style="display:none;">{% csrf_token %}</form>
+
+  <script>
+    (function(){
+      function getCookie(name){
+        const value = '; ' + document.cookie;
+        const parts = value.split('; ' + name + '=');
+        if (parts.length === 2) return parts.pop().split(';').shift();
+      }
+
+      function getCsrfToken(){
+        return (
+          getCookie('csrftoken') ||
+          document.querySelector('input[name="csrfmiddlewaretoken"]')?.value ||
+          ''
+        );
+      }
+
+      const grid = document.getElementById('fav-grid');
+      const filter = document.getElementById('fav-filter');
+      const selectAll = document.getElementById('select-all');
+      const removeBtn = document.getElementById('remove-selected');
+      const selCount = document.getElementById('sel-count');
+
+      function refreshCount(){
+        if (!grid || !selCount) return;
+        const boxes = grid.querySelectorAll('.fav-check');
+        const selected = Array.from(boxes).filter(b=>b.checked).length;
+        selCount.textContent = '已选 ' + selected + ' 项';
+      }
+
+      filter?.addEventListener('input', ()=>{
+        const q = (filter.value || '').trim().toLowerCase();
+        grid?.querySelectorAll('.item')?.forEach(it=>{
+          const url = (it.getAttribute('data-url') || '').toLowerCase();
+          const tags = (it.getAttribute('data-tags') || '').toLowerCase();
+          it.style.display = (!q || url.includes(q) || tags.includes(q)) ? '' : 'none';
+        });
+      });
+
+      grid?.addEventListener('change', (e)=>{
+        if (e.target && e.target.classList.contains('fav-check')) refreshCount();
+      });
+
+      selectAll?.addEventListener('click', ()=>{
+        if (!grid) return;
+        const boxes = grid.querySelectorAll('.fav-check');
+        const allChecked = Array.from(boxes).every(b=>b.checked);
+        boxes.forEach(b=> b.checked = !allChecked);
+        refreshCount();
+      });
+
+      async function removeByIds(ids){
+        // 后端按 id 删：逐个发（最稳，不依赖后端批量参数）
+        const csrftoken = getCsrfToken();
+
+        for (const id of ids){
+          const one = new FormData();
+          one.append('id', String(id));
+          const resp = await fetch('/api/favorite/remove/', {
+            method:'POST',
+            body: one,
+            credentials: 'same-origin',
+            headers: csrftoken ? {'X-CSRFToken': csrftoken} : {}
+          });
+          if (!resp.ok){
+            UI?.toast({title:"移除失败", message:'删除失败（HTTP ' + resp.status + ')', type:"bad"});
+            return;
+          }
+        }
+        UI?.toast({title:"已移除", message:'成功移除 ' + ids.length + ' 项', type:"good"});
+        setTimeout(()=> location.reload(), 500);
+      }
+
+      removeBtn?.addEventListener('click', async ()=>{
+        if (!grid) return;
+        const boxes = grid.querySelectorAll('.fav-check:checked');
+        const ids = Array.from(boxes).map(b=> parseInt(b.closest('.item')?.getAttribute('data-id') || '0')).filter(id=> id > 0);
+        if (!ids.length){
+          UI?.toast({title:"未选择", message:"请先选中要删除的项", type:"warn"});
+          return;
+        }
+        if (!confirm('确定删除选中的 ' + ids.length + ' 项吗？')) return;
+        await removeByIds(ids);
+      });
+
+      grid?.addEventListener('click', (e)=>{
+        const item = e.target.closest('.item');
+        if (!item) return;
+        const id = parseInt(item.getAttribute('data-id') || '0');
+
+        if (e.target.classList.contains('fav-del')){
+          if (confirm('确定删除此项吗？')){
+            removeByIds([id]);
+          }
+        }else if (e.target.classList.contains('copy-url')){
+          const url = item.getAttribute('data-url');
+          if (url && navigator.clipboard){
+            navigator.clipboard.writeText(url).then(()=>{
+              UI?.toast({title:"已复制", message:"图片链接已复制到剪贴板", type:"good", timeout:2000});
+            });
+          }
+        }
+      });
+    })();
+  </script>
+{% endblock %}

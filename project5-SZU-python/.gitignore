@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+__MACOSX/
+
+# Logs
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data/artifacts (generated / large)
+assignments/gallery_features.npy
+assignments/gallery_index.csv
+assignments/images/
+assignments/images1/
+assignments/crawl_results_async*.csv
+
+# Django / local runtime artifacts
+assignments/XImageSearch/db.sqlite3
+assignments/XImageSearch/media/
+assignments/XImageSearch/staticfiles/
+assignments/XImageSearch/.env
+
+# Backup copy folder
+project5-SZU-python - 副本/

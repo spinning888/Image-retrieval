@@ -1,0 +1,103 @@
+{% extends 'image_search/base.html' %}
+{% block title %}图搜图 · 首页{% endblock %}
+{% block content %}
+  {% load static %}
+
+  <section class="heroV2" data-animate>
+    <div class="heroV2-left">
+      <div class="badge"><span class="mini-dot" aria-hidden="true"></span> 本地 AI 图搜图</div>
+
+      <h1 class="heroV2-title">以图搜图</h1>
+      <p class="heroV2-subtitle">
+        拖拽图片到右侧上传卡片，或选择文件 / 直接粘贴图片。
+      </p>
+
+      <div class="heroV2-meta">
+        <div class="metaRow">
+          <span class="metaKey">支持格式</span>
+          <span class="metaVal">JPEG / PNG / WebP / GIF / BMP / TIFF</span>
+        </div>
+        <div class="metaRow">
+          <span class="metaKey">快捷键</span>
+          <span class="metaVal"><span class="kbd">Ctrl/Command V</span> 粘贴 · <span class="kbd">Ctrl/Command O</span> 选择文件</span>
+        </div>
+      </div>
+
+      <div class="heroV2-actions">
+        <a class="button" href="/history/">查看历史</a>
+        <a class="button" href="/favorites/">我的收藏</a>
+        <a class="button secondary" href="/results/">最近结果</a>
+      </div>
+
+      <div class="card pad soft heroV2-tip">
+        <div class="subtitle" style="margin-top:0; font-weight:900;">提示</div>
+        <div style="color: var(--muted); font-size: 14px; line-height: 1.75;">
+          <div>• 结果页点击图片可放大、复制链接、下载</div>
+          <div>• 右上角可切换主题 / 樱花特效</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="heroV2-right">
+      <div class="card pad heroUploadCard">
+        <div class="heroUploadHeader">
+          <div>
+            <div class="heroUploadTitle">上传查询图片</div>
+            <div class="heroUploadDesc">拖拽到卡片内 / 点击选择 / 粘贴图片</div>
+          </div>
+        </div>
+
+        <form id="search-form" method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          <div id="dropzone" class="dropzone dropzoneV2">
+            <div class="dzTitle">拖拽图片到此处</div>
+            <div class="dzHint">或点击选择文件 · 支持 <span class="kbd">Ctrl/Command V</span> 粘贴</div>
+
+            <input id="file-input" name="image" type="file" accept="image/*" style="display:none;" />
+
+            <div class="dzBtns">
+              <button id="choose-btn" class="button" type="button">选择文件</button>
+              <button id="submit-btn" class="button primary" type="submit">开始搜索</button>
+            </div>
+
+            <div id="file-name" class="footer dzFileName"></div>
+
+            <div id="upload-progress" class="progress" style="margin-top:14px; display:none;">
+              <div id="upload-bar" class="progress-bar"></div>
+            </div>
+            <div id="upload-info" class="footer" style="margin-top:8px; display:none; justify-content:flex-start; gap:8px; align-items:center;">
+              <span id="upload-pct">0%</span>
+              <span id="upload-spinner" class="spinner"></span>
+            </div>
+          </div>
+
+          <div class="heroParams">
+            <div>
+              <div class="footer" style="margin-top:0;">TopK</div>
+              <input type="number" name="topk" min="1" max="200" value="50" />
+            </div>
+            <div>
+              <div class="footer" style="margin-top:0;">阈值</div>
+              <input type="number" name="threshold" step="0.01" min="0" max="1" value="0.0" />
+            </div>
+          </div>
+
+          {% if error %}
+            <div class="card pad" style="margin-top:12px; border-color: rgba(255,92,122,.35);">
+              <div style="font-weight:900;">请求失败</div>
+              <div class="subtitle" style="color: var(--bad);">{{ error }}</div>
+            </div>
+          {% endif %}
+        </form>
+      </div>
+
+      <div class="card pad soft" style="margin-top:12px;" data-animate>
+        <div class="subtitle" style="margin-top:0; font-weight:900;">隐私与本地</div>
+        <div class="footer">本地服务：仅上传你选择的图片用于检索。</div>
+      </div>
+    </div>
+  </section>
+
+  <script src="{% static 'image_search/app.js' %}?v=20260116-3"></script>
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends 'image_search/base.html' %}
+{% load static %}
+{% block title %}图搜图 · 结果{% endblock %}
+{% block content %}
+  <div class="card pad" style="margin-bottom: 16px;">
+    <div class="toolbar">
+      <div class="left" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <div class="badge"><span class="mini-dot" aria-hidden="true"></span> 搜索结果</div>
+      </div>
+
+      <div class="right" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <a class="button" href="/">重新搜索</a>
+        <a class="button" href="/history/">历史</a>
+      </div>
+    </div>
+
+    <div class="sep"></div>
+
+    <div id="status" class="subtitle" style="margin-top:0;">
+      {% if error %}
+        <span style="color: var(--bad); font-weight: 900;">后端异常：</span>
+        <span style="white-space:pre-wrap;">{{ error }}</span>
+      {% elif pending %}
+        正在检索中...（页面会自动刷新结果）
+      {% elif results and results|length > 0 %}
+        已加载 {{ results|length }} 条结果
+      {% else %}
+        暂无结果
+      {% endif %}
+    </div>
+
+    {% if query_web_url %}
+      <div style="margin-top:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+        <span class="pill">Query</span>
+        <img src="{{ query_web_url }}" alt="query" style="width:56px; height:56px; border-radius:14px; object-fit:cover; border:1px solid var(--border);">
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="card pad" style="margin-bottom:16px;">
+    <div class="controls">
+      <div class="ctrl">
+        <label>阈值</label>
+        <div class="range">
+          <input id="thr" type="range" min="0" max="1" step="0.01" value="0.75">
+          <span class="pill">thr=<b id="thr-val">0.75</b></span>
+          <span class="pill">强≥<b id="b-strong">-</b></span>
+          <span class="pill">中≥<b id="b-medium">-</b></span>
+        </div>
+      </div>
+
+      <div class="ctrl">
+        <label>筛选 / 分组</label>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <label class="pill"><input id="only-pass" type="checkbox" style="margin-right:8px;">仅合格</label>
+          <label class="pill"><input id="hide-poor" type="checkbox" style="margin-right:8px;">隐藏 Poor</label>
+          <label class="pill"><input id="group-mode" type="checkbox" style="margin-right:8px;">分组显示</label>
+          <label class="pill"><input id="show-strong" type="checkbox" checked style="margin-right:8px;">强(<b id="cnt-strong">0</b>)</label>
+          <label class="pill"><input id="show-medium" type="checkbox" checked style="margin-right:8px;">中(<b id="cnt-medium">0</b>)</label>
+          <label class="pill"><input id="show-weak" type="checkbox" checked style="margin-right:8px;">弱(<b id="cnt-weak">0</b>)</label>
+          <label class="pill"><input id="show-poor" type="checkbox" checked style="margin-right:8px;">差(<b id="cnt-poor">0</b>)</label>
+          <select id="sort" style="min-width: 160px;">
+            <option value="score_desc">按分数 ↓</option>
+            <option value="score_asc">按分数 ↑</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid" id="results-grid" data-hid="{{ hid|default:'' }}">
+    {% for result in results %}
+      <div class="item" data-url="{{ result.url }}" data-score="{{ result.score|floatformat:6 }}">
+        <div class="match"><i></i><span class="m-text">Match</span></div>
+        <img class="thumb" src="{{ result.url }}" alt="result">
+        <div class="meta">
+          <div class="url">{{ result.url }}</div>
+          <div class="score">{{ result.score|floatformat:3 }}</div>
+        </div>
+        <div style="padding: 0 10px 12px; display:flex; gap:10px; align-items:center;">
+          <button class="button secondary fav-add" type="button">收藏</button>
+          <button class="button ghost copy-url" type="button">复制链接</button>
+        </div>
+      </div>
+    {% empty %}
+      <div class="card pad" style="grid-column:1/-1; color: var(--muted);">
+        {% if pending %}
+          后端检索中...请稍候（本页会自动刷新）
+        {% elif error %}
+          后端异常：{{ error }}
+        {% else %}
+          暂无结果。你可以回首页重新搜索。
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+
+  <script src="{% static 'image_search/results.js' %}?v=20260116-3"></script>
+{% endblock %}

@@ -1,0 +1,174 @@
+{% extends 'image_search/base.html' %}
+{% block title %}图搜图 · 历史{% endblock %}
+{% block content %}
+  <div class="card pad" style="margin-bottom: 16px;">
+    <div class="toolbar">
+      <div class="left">
+        <div class="badge"><span class="mini-dot" aria-hidden="true"></span> 搜索历史</div>
+        <div class="pill">点击一条记录可查看详情</div>
+      </div>
+      <div class="right" style="min-width: min(520px, 100%);">
+        <input id="history-filter" type="search" placeholder="本页筛选：时间 / URL / 分数..." style="max-width: 420px;">
+      </div>
+    </div>
+  </div>
+
+  <div id="history-list">
+    {% for h in records %}
+      <div class="card pad" style="margin-bottom: 12px;" data-record>
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+          {% if h.query_preview_url %}
+            <img src="{{ h.query_preview_url }}" alt="query" style="width:48px; height:48px; object-fit:cover; border-radius:12px; border:1px solid var(--border);">
+          {% endif %}
+
+          <a href="/history/{{ h.id }}/" style="font-weight:900;">{{ h.created_at|date:"Y-m-d H:i:s" }}</a>
+
+          <div style="display:flex; gap:10px; align-items:center; margin-left:auto; flex-wrap:wrap;">
+            <button class="button" type="button" data-toggle="{{ h.id }}" aria-expanded="false" aria-controls="rec-{{ h.id }}">展开</button>
+            <a class="button ghost" href="/history/{{ h.id }}/">详情</a>
+            <button class="button secondary" type="button" data-del="{{ h.id }}">删除</button>
+          </div>
+        </div>
+
+        <div id="rec-{{ h.id }}" data-body hidden style="margin-top:12px;">
+          <div class="footer" data-loading style="display:none;">正在加载结果...</div>
+          <div class="grid" data-grid></div>
+          <div class="footer" style="margin-top:10px;">
+            <a href="/results/?hid={{ h.id }}">在结果页查看</a>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <div class="card pad" style="color: var(--muted);">暂无历史记录</div>
+    {% endfor %}
+  </div>
+
+  <script>
+    (function(){
+      function getCookie(name){
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+      }
+
+      const list = document.getElementById('history-list');
+      const filter = document.getElementById('history-filter');
+
+      function num(x, d=0){
+        const v = Number(x);
+        return Number.isFinite(v) ? v : d;
+      }
+
+      function renderPreview(gridEl, results){
+        if (!gridEl) return;
+        gridEl.innerHTML = '';
+        for (const r of (results || []).slice(0, 12)){
+          const url = r.url;
+          const score = num(r.score, 0);
+
+          const div = document.createElement('div');
+          div.className = 'item';
+          div.setAttribute('data-url', url);
+          div.setAttribute('data-score', String(score));
+          div.innerHTML = `
+            <img class="thumb" src="${url}" alt="thumb">
+            <div class="meta">
+              <div class="url"></div>
+              <div class="score">${score.toFixed(3)}</div>
+            </div>
+          `;
+          div.querySelector('.url').textContent = url;
+          gridEl.appendChild(div);
+        }
+        UI?.bindImageGridViewer(document);
+      }
+
+      async function loadRecordPreview(card, hid){
+        const body = card?.querySelector('[data-body]');
+        const loading = body?.querySelector('[data-loading]');
+        const gridEl = body?.querySelector('[data-grid]');
+        if (!body || !gridEl) return;
+        if (body.dataset.loaded === '1') return;
+
+        try{
+          if (loading) loading.style.display = '';
+          const resp = await fetch(`/api/results/?hid=${encodeURIComponent(hid)}`, {headers:{'Accept':'application/json'}});
+          const j = await resp.json();
+          if (!j.ok){
+            UI?.toast({title:"加载失败", message:j.error || `HTTP ${resp.status}`, type:"bad"});
+            body.dataset.loaded = '1';
+            return;
+          }
+          if (j.pending){
+            UI?.toast({title:"尚未完成", message:"该记录仍在检索中，可去结果页查看", type:"warn", timeout:2600});
+            body.dataset.loaded = '1';
+            return;
+          }
+          renderPreview(gridEl, j.results || []);
+          body.dataset.loaded = '1';
+        }catch(e){
+          UI?.toast({title:"加载失败", message:String(e), type:"bad"});
+          body.dataset.loaded = '1';
+        }finally{
+          if (loading) loading.style.display = 'none';
+        }
+      }
+
+      filter?.addEventListener('input', ()=>{
+        const q = (filter.value || '').trim().toLowerCase();
+        list?.querySelectorAll('[data-record]')?.forEach(card=>{
+          const t = card.textContent.toLowerCase();
+          card.style.display = (!q || t.includes(q)) ? '' : 'none';
+        });
+      });
+
+      list?.addEventListener('click', async (e)=>{
+        const toggle = e.target?.closest?.('[data-toggle]');
+        if (toggle){
+          const hid = toggle.getAttribute('data-toggle');
+          if (!hid) return;
+          const card = toggle.closest('[data-record]');
+          const body = card?.querySelector(`#rec-${hid}`);
+          if (!body) return;
+
+          const willOpen = body.hasAttribute('hidden');
+          if (willOpen){
+            body.removeAttribute('hidden');
+            toggle.textContent = '收起';
+            toggle.setAttribute('aria-expanded', 'true');
+            await loadRecordPreview(card, hid);
+          }else{
+            body.setAttribute('hidden', '');
+            toggle.textContent = '展开';
+            toggle.setAttribute('aria-expanded', 'false');
+          }
+          return;
+        }
+
+        const btn = e.target?.closest?.('[data-del]');
+        if (!btn) return;
+        const id = btn.getAttribute('data-del');
+        if (!id) return;
+
+        const fd = new FormData();
+        fd.append('id', id);
+        const csrftoken = getCookie('csrftoken');
+
+        const resp = await fetch('/api/history/remove/', {
+          method:'POST',
+          body: fd,
+          headers: csrftoken ? {'X-CSRFToken': csrftoken} : {}
+        });
+
+        if (resp.ok){
+          UI?.toast({title:"已删除", message:"已删除该记录", type:"good"});
+          setTimeout(()=> location.reload(), 400);
+        }else{
+          UI?.toast({title:"删除失败", message:`HTTP ${resp.status}`, type:"bad"});
+        }
+      });
+
+      UI?.bindImageGridViewer(document);
+    })();
+  </script>
+{% endblock %}
