@@ -1,32 +1,32 @@
-# 🚀 XImageSearch — Django 图搜图系统
+# 🚀 XImageSearch — Django Image Retrieval System
 ## AI Image Retrieval Web
 
 ---
 
 ## 🏆 News
-- [Jan.16] README 模板化整理与实验交付版本
+- [Jan.16] README refined for assignment delivery and repository distribution
 
 ---
 
 ## 📋 Project Overview
 
-XImageSearch 是一个基于 Django 的本地网页“以图搜图”系统：支持上传查询图片，使用 DINOv2 (ViT-B/14) 提取 embedding，与离线构建的图库特征做余弦相似度检索，返回 Top-K 结果。
+XImageSearch is a Django-based local **image-to-image retrieval** web system. It supports uploading a query image, extracting an embedding using **DINOv2 (ViT-B/14)**, and performing **cosine similarity search** against an offline-built gallery feature database to return **Top-K** results.
 
-本项目面向 **Python 程序设计课程实验**，强调：
-- 与实验 readme 任务要求对齐（`dinov2_numpy.py` / `preprocess_image.py` / `debug.py` / 检索 Top-10）
-- Web 端交互完整（上传→异步检索→结果页轮询刷新→历史/收藏）
-- 性能优化（尽快出结果）与可选 GPU 后端（ONNX Runtime / DirectML）
+This repository is prepared for a **Python Programming course project**, emphasizing:
+- Alignment with the assignment checklist (`dinov2_numpy.py` / `preprocess_image.py` / `debug.py` / Top-10 retrieval)
+- A complete web workflow (upload → async retrieval → polling → history/favorites)
+- Practical performance engineering (fast response) and an optional ONNX/DirectML backend
 
 ---
 
 ## ✨ Core Innovations
 
-- **异步检索链路**：上传后立即返回结果页，通过轮询接口获取任务状态与结果（避免请求阻塞）
-- **TopK 加速**：用 `argpartition` 快速取 Top-K（避免全量排序），检索耗时稳定在毫秒级
-- **Embedding 复用缓存**：同一图片重复搜索可直接复用 embedding（加速重复查询）
-- **结果质量分层展示**：按相似度区间分组与计数，支持阈值过滤（更直观可解释）
-- **收藏/历史完整闭环**：收藏支持 tags，历史页支持折叠与懒加载（易于演示与复盘）
-- **可选 GPU / DirectML**：在不破坏 CPU 版本的前提下支持 ONNX Runtime 加速（Windows 友好）
+- **Asynchronous retrieval pipeline**: redirects to the results page immediately after upload; the frontend polls for task status/results (no blocking requests)
+- **Top-K acceleration**: uses `argpartition` to select Top-K efficiently (avoids full sorting), keeping retrieval latency stable in milliseconds
+- **Embedding reuse cache**: repeated searches on the same image can reuse embeddings to reduce redundant computation
+- **Quality-tiered results view**: groups results by similarity ranges and supports threshold filtering for better interpretability
+- **History & favorites loop**: history records are traceable; favorites support tags and fast filtering (demo-friendly)
+- **Optional GPU / DirectML**: enables ONNX Runtime acceleration without breaking the CPU pipeline (Windows-friendly)
 
 ---
 
@@ -34,71 +34,98 @@ XImageSearch 是一个基于 Django 的本地网页“以图搜图”系统：�
 
 ### 1️⃣ Install Dependencies
 
-在本目录（含 `requirements.txt`）执行：
+Run in the directory containing `requirements.txt`:
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2️⃣ Prepare Gallery (离线构建图库特征)
+### ✅ Linux Setup (Optional, Recommended)
 
-系统默认从上级 `assignments/` 读取以下文件作为检索底库：
+Tested on Ubuntu/Debian-like distributions. For CentOS/RHEL, replace `apt` with your package manager.
+
+```bash
+# 1) System dependencies
+sudo apt update
+sudo apt install -y python3 python3-venv python3-pip build-essential
+
+# 2) Create & activate virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# 3) Upgrade pip & install requirements
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### 2️⃣ Prepare Gallery (Offline Feature Building)
+
+By default, the system loads the following files from the upper-level `assignments/` directory as the retrieval database:
 - `gallery_features.npy`
 - `gallery_index.csv`
 
-如果你还没生成它们，请到 `assignments/` 目录执行：
+If you have not generated them yet, go to `assignments/` and run:
+
 ```bash
 python build_gallery.py
 ```
 
-（可选）如果需要先下载图片构建图库，可使用 `data.csv` + 爬虫脚本（如 `async_image_crawler.py`）。
-
 ### 3️⃣ Initialize & Run Web
 
 ```bash
-# 进入项目根目录（manage.py 所在目录）
+# Enter the project root (where manage.py is located)
 cd XImageSearch
 
-# 初始化数据库
+# Initialize database
 python manage.py migrate
 
-# 启动服务
+# Start server
 python manage.py runserver
 ```
 
-访问： http://127.0.0.1:8000/
+Open: http://127.0.0.1:8000/
 
 ---
 
-## 🧪 实验任务对齐（必做）
+## 🧪 Assignment Requirement Checklist (Mandatory)
 
-按上级目录 `assignments/readme.txt` 的要求，本实验核心检查点包括：
-- 完成 `preprocess_image.py` 中的 `resize_short_side`（短边缩放到目标尺寸，同时保证边长为 14 的倍数）
-- 完成 `dinov2_numpy.py` 的 DINOv2 NumPy 前向推理
-- 运行 `assignments/debug.py`，并与 `assignments/demo_data/cat_dog_feature.npy` 对比，确保误差在可接受范围内
-- Web 检索：上传图片 → 预处理 → 提取 embedding → 与图库特征计算相似度 → 返回 Top-10
+According to `assignments/readme.txt`, the key checkpoints are:
+
+- Implement `resize_short_side` in `preprocess_image.py` (resize the short side to the target size while ensuring both sides are multiples of 14)
+- Complete the DINOv2 NumPy forward inference in `dinov2_numpy.py`
+- Run `assignments/debug.py` and compare with `assignments/demo_data/cat_dog_feature.npy` to ensure the numerical deviation is within an acceptable tolerance
+- Web retrieval flow: upload image → preprocessing → embedding extraction → cosine similarity search → return Top-10 results
 
 ---
 
-## 🧩 Optional: Run Embedding on GPU (Windows recommended)
+## 🧩 Optional: Run Embedding on GPU (Windows Recommended)
 
-本项目支持可选 ONNX Runtime 后端（仅影响“查询图 embedding”，图库特征仍来自离线构建）。
+This project supports an optional ONNX Runtime backend only for query embedding extraction. The gallery features still come from the offline-built database.
 
 ### 1) Install runtime
-- Windows（推荐）：
+
+- Windows (recommended):
+
 ```bash
 pip install onnxruntime-directml
 ```
-- NVIDIA CUDA（可选）：
+
+- NVIDIA CUDA (optional):
+
 ```bash
 pip install onnxruntime-gpu
 ```
 
 ### 2) Provide an ONNX model file
-你需要一个 **与离线构建图库时同权重/同输出维度** 的 DINOv2 ViT-B/14 ONNX 模型。
-例如放在：`assignments/vit-dinov2-base.onnx`
+
+You need a DINOv2 ViT-B/14 ONNX model that is consistent with the offline gallery build (same weights / same output dimension). Example:
+
+`assignments/vit-dinov2-base.onnx`
 
 ### 3) Enable via environment variables
-PowerShell 示例：
+
+PowerShell example:
+
 ```powershell
 $env:DINO_BACKEND='onnx'
 $env:DINO_ONNX_PATH='C:\\...\\assignments\\vit-dinov2-base.onnx'
@@ -117,6 +144,7 @@ python manage.py runserver
 - Favorites: `/favorites/`
 
 ### APIs
+
 - Results polling: `/api/results/`
 - Remove history: `/api/history/remove/`
 - Add favorite: `/api/favorite/add/`
@@ -130,19 +158,19 @@ python manage.py runserver
 XImageSearch/
 ├── manage.py                  # Django entry point
 ├── mysite/                    # Django project settings
-│   ├── settings.py            # static/media/gallery/onnx env 配置
-│   └── urls.py                # 路由入口
-├── image_search/              # 核心 App
-│   ├── views.py               # 上传、异步检索、轮询接口、收藏/历史
-│   ├── search_engine.py       # 特征加载与 TopK 检索
-│   ├── dinov2_onnx.py         # ONNX Runtime 后端（可选）
-│   ├── models.py              # History / Favorite 等
-│   ├── templates/image_search/# 页面模板
-│   └── static/image_search/   # 前端 JS/CSS
-├── media/                     # 上传图片（本地演示）
-├── static/                    # 项目级静态资源（如有）
-├── db.sqlite3                 # SQLite 数据库
-├── requirements.txt           # 依赖
+│   ├── settings.py            # static/media/gallery/onnx env configuration
+│   └── urls.py                # URL routing entry
+├── image_search/              # Core app
+│   ├── views.py               # upload, async retrieval, polling APIs, favorites/history
+│   ├── search_engine.py       # feature loading and Top-K retrieval
+│   ├── dinov2_onnx.py         # optional ONNX Runtime backend
+│   ├── models.py              # History / Favorite models
+│   ├── templates/image_search/# HTML templates
+│   └── static/image_search/   # frontend JS/CSS
+├── media/                     # uploaded images (local demo)
+├── static/                    # project-level static assets (if any)
+├── db.sqlite3                 # SQLite database
+├── requirements.txt           # dependencies
 └── README.md
 ```
 
@@ -156,23 +184,33 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-（首次使用如果没有 `gallery_features.npy` / `gallery_index.csv`，先到上级 `assignments/` 跑 `python build_gallery.py`。）
+(If `gallery_features.npy` / `gallery_index.csv` are missing, run `python build_gallery.py` in the upper-level `assignments/` first.)
 
 ---
 
 ## 🌟 Feature Summary
 
-- 图像上传 → embedding → Top-K 相似检索
-- 异步执行 + 结果页轮询刷新
-- 阈值过滤、相似度分段展示
-- 历史记录（折叠/懒加载）
-- 收藏（支持 tags）
-- 可选 ONNX Runtime / DirectML 加速（CPU 自动回退）
+- Image upload → embedding extraction → Top-K similarity search
+- Asynchronous execution + results polling
+- Threshold filtering and score-range grouping
+- History records (collapsible / lazy loading)
+- Favorites (tag-supported)
+- Optional ONNX Runtime / DirectML acceleration (CPU fallback available)
+
+---
+
+## 📜 License & Notice
+
+This repository is provided for educational and assignment submission purposes.
+
+Unless otherwise stated, the code is released under the MIT License (see the repository root `LICENSE`).
+
+Third-party models, weights, and datasets (if any) are subject to their respective licenses and terms.
 
 ---
 
 ## ✨ Contact
 
-Any issues, feel free to contact.
+If you encounter any issues, feel free to reach out.
 
 Email: 2024150065@mails.szu.edu.cn
